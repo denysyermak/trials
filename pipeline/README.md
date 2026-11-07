@@ -7,8 +7,8 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 - Caption: one short Russian phrase about what the video shows. No emoji, no hashtags.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
 - Interval 30 min (at 15 min Reels sat at zero views while the next one went out).
-- Process the WHOLE batch first, then publish. Do not trim videos longer than 30 s.
-- Never invent words. If a fragment stays unclear after re-transcription, delete it from the subtitles and tell Denys which ones.
+- CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
+- Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
 
 ## Setup (new chat)
@@ -17,28 +17,40 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 3. `git config user.name Claude; git config user.email noreply@anthropic.com`; `git push --dry-run` to check access. `mkdir -p /home/claude/out`.
 4. Load vidIQ tools: `select:mcp__vidIQ__vidiq_video_upload,mcp__vidIQ__vidiq_instagram_publish_reel`.
 
-## Step 1: transcribe the batch (foreground only, background processes die after a reply)
-Use the prompt from the start, it restores punctuation and spells local names right:
+## Conveyor (the order of work)
+A send_later timer does NOT interrupt a running turn: it waits until the turn ends. So never process for more than ~20 min in one turn.
+
+First turn (videos just arrived):
+1. Put all names into queue.tsv in file-number order with an empty caption for now.
+2. Process video 1 fully (steps A-C below), write its caption, publish it (step D), tell Denys link + caption.
+3. Process the next videos one by one until ~20 min have passed since that publish.
+4. send_later(delay_minutes = 30 minus minutes already spent after the publish, at least 1) with the timer message (step E). End the turn.
+
+Each timer turn:
+1. Next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first, then publish.
+2. Tell Denys link + caption.
+3. Process further unprocessed videos for up to ~20 min, then send_later for the remaining time to 30 min, end the turn.
+4. Queue empty: give the full list of links of this batch from published.log, no new timer.
+
+## A. Transcribe (foreground only, background processes die after a reply)
+Use the prompt, it restores punctuation and spells local names right:
 ```
 export PROMPT="Привет, друзья! Это Флорида, St. Johns County, Джексонвилл. Недвижимость, риэлтор, аквапарк, townhouse."
-for f in A B C; do timeout 280 python3 -I pipeline/process.py /mnt/user-data/uploads/$f.mov /home/claude/out; done
+timeout 280 python3 -I pipeline/process.py /mnt/user-data/uploads/NAME.mov /home/claude/out
 ```
-Keep each Bash call under 10 min (several videos per call, re-run skips nothing, so list only the ones left). Add brand/place names seen in frames to PROMPT (e.g. "V Pizza").
+Add brand/place names seen in frames to PROMPT (e.g. "V Pizza"). A 20-60 s video takes ~1-2 min.
 
-## Step 2: check every transcript
-Print full text + subtitle chunks for each video and read them all. Typical errors: риэлтор, Джексонвилл, недвижимость, English place names, kids' speech.
+## B. Check the transcript
+Read the full text + subtitle chunks. Typical errors: риэлтор, Джексонвилл, недвижимость, English place names, kids' speech.
 - Look at frames (ffmpeg -ss T -frames:v 1) to identify signs, restaurants, communities.
-- Unclear fragment: cut it to a wav (`ffmpeg -ss S -t D -i in.mov -vn -ac 1 -ar 16000 x.wav`), re-transcribe with beam 1/5, with and without prompt. Load wav as numpy (int16/32768), not by path. Still unclear -> delete.
+- Unclear fragment: cut it to a wav (`ffmpeg -ss S -t D -i in.mov -vn -ac 1 -ar 16000 x.wav`), re-transcribe with beam 1/5, with and without prompt. Load wav as numpy (int16/32768), not by path. Still unclear -> delete from subtitles.
 - Fix with `python3 pipeline/editwords.py NAME 'old=new' 'old@-2=new' '#30-36='` (`--show` lists indexes). It reruns --rechunk.
 - Recurring errors go into FIXES in process.py (commit them).
 
-## Step 3: encode + spot check
-`timeout 120 bash pipeline/encode.sh /mnt/user-data/uploads/NAME.mov /home/claude/out/NAME.ass /home/claude/out/NAME.mp4` (encode to a .tmp.mp4 and mv, so a killed run never leaves a broken file). Grab 3-4 frames into one hstack jpg and look: subtitles readable, above bottom UI, video not stretched.
+## C. Encode + spot check + caption
+`timeout 120 bash pipeline/encode.sh /mnt/user-data/uploads/NAME.mov /home/claude/out/NAME.ass /home/claude/out/NAME.tmp.mp4 && mv /home/claude/out/NAME.tmp.mp4 /home/claude/out/NAME.mp4`. Look at 3-4 frames in one hstack jpg: subtitles readable, above bottom UI, video not stretched. Write the caption into queue.tsv (`NAME<TAB>caption`).
 
-## Step 4: queue
-Write `/home/claude/out/queue.tsv`: `NAME<TAB>caption`, one line per video, in the order to publish (usually file number order). `pipeline/next.sh` prints the next unpublished line.
-
-## Step 5: publish one
+## D. Publish one
 1. `bash pipeline/push.sh NAME` -> prints raw.githubusercontent.com URL.
 2. `vidiq_video_upload(url=RAW, title=NAME)` -> videoUrl.
 3. `vidiq_instagram_publish_reel(platformAccountId, videoUrl, caption, trialParams={graduationStrategy: MANUAL})` -> containerId.
@@ -46,10 +58,9 @@ Write `/home/claude/out/queue.tsv`: `NAME<TAB>caption`, one line per video, in t
 5. `bash pipeline/done.sh NAME PERMALINK` (removes the mp4 from the repo, appends to published.log).
 On any error: stop, do not retry automatically, tell Denys.
 
-## Step 6: timer
-Publish the first video right away (or when 30 min passed since the last one), then after each publish:
-`send_later(delay_minutes=30, initiation=human_schedule, message=...)` with this message:
-> Таймер: опубликуй следующий trial Reel. Возьми строку из `bash /home/claude/trials/pipeline/next.sh`. Цепочка: push.sh NAME -> vidiq_video_upload(raw url) -> vidiq_instagram_publish_reel (account 28924267387235125, caption из queue.tsv, trialParams MANUAL) -> ждать PUBLISHED -> done.sh NAME PERMALINK. Затем коротко сообщи Денису ссылку и подпись и поставь следующий таймер send_later на 30 минут, если в очереди ещё есть ролики. Если очередь пуста, дай итоговый список всех ссылок этой пачки из published.log.
+## E. Timer message
+`send_later(delay_minutes=..., initiation=human_schedule, message=...)`:
+> Таймер: конвейер trial Reels по pipeline/README.md. Следующий ролик: `bash /home/claude/trials/pipeline/next.sh`. Если он ещё не обработан, обработай (A-C), затем опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай следующие ролики не дольше ~20 минут и поставь новый send_later так, чтобы следующая публикация вышла через 30 минут после этой. Если очередь пуста, дай итоговый список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
