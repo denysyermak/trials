@@ -6,7 +6,7 @@ Writes <outdir>/<name>.mp4, <name>.json (segments + words), <name>.ass
 import sys, os, json, subprocess, re
 
 MODEL = os.environ.get("WMODEL", "medium")
-FIXES = {"8.45": "8:45", "в бой дом": "в бой, дом", "флориде": "Флориде", "америке": "Америке", "все принтер": "Все, принтер", "Сен-Джонс": "St. Johns", "Каунти": "County", "8.15": "8:15", "обращается": "обращаться", "Доллар три": "Dollar Tree", "доллар три": "Dollar Tree", "недурого": "по дороге", "павликсом": "Publix", "Велком": "Welcome", "Фолл Брей": "Fall Break", "Сен-Джонс Каунти": "St. Johns County", "Julenton": "Julington", "Джулентон": "Julington", "8.09": "8:09", "КРИСМОС": "Christmas", "Крисмос": "Christmas", "помештаем": "помечтаем"}
+FIXES = {"8.45": "8:45", "в бой дом": "в бой, дом", "флориде": "Флориде", "америке": "Америке", "все принтер": "Все, принтер", "Сен-Джонс": "St. Johns", "Каунти": "County", "8.15": "8:15", "обращается": "обращаться", "Доллар три": "Dollar Tree", "доллар три": "Dollar Tree", "недурого": "по дороге", "павликсом": "Publix", "Велком": "Welcome", "Фолл Брей": "Fall Break", "Сен-Джонс Каунти": "St. Johns County", "Julenton": "Julington", "Джулентон": "Julington", "8.09": "8:09", "Джексон-Вилле": "Джексонвилле", "аквапарт": "аквапарк", "КРИСМОС": "Christmas", "Крисмос": "Christmas", "помештаем": "помечтаем"}
 
 def ts(t):
     h = int(t // 3600); m = int(t % 3600 // 60); s = t % 60
@@ -89,7 +89,7 @@ def main():
     import wave, numpy as np
     with wave.open(wav, "rb") as wf:
         audio = np.frombuffer(wf.readframes(wf.getnframes()), dtype=np.int16).astype(np.float32) / 32768.0
-    segs, info = m.transcribe(audio, language="ru", word_timestamps=True, vad_filter=False, beam_size=5)
+    segs, info = m.transcribe(audio, language="ru", word_timestamps=True, vad_filter=False, beam_size=5, initial_prompt=os.environ.get("PROMPT") or None)
     segments, words = [], []
     for s in segs:
         segments.append({"s": s.start, "e": s.end, "t": s.text.strip()})
