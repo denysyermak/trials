@@ -1,12 +1,12 @@
 # Trial Reels pipeline
 
-Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), one every 30 minutes, without asking for confirmation. Nothing goes to Facebook or TikTok.
+Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), one every 50 minutes, without asking for confirmation. Nothing goes to Facebook or TikTok.
 
 ## Rules agreed with Denys
 - Trial only, MANUAL. Account platformAccountId `28924267387235125` (vidIQ, Always Allow).
 - Caption: one short Russian phrase about what the video shows. No emoji, no hashtags.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
-- Interval 30 min (at 15 min Reels sat at zero views while the next one went out).
+- Interval 50 min. Instagram allows ~30 trial Reels per 24 h (Denys's count); 50 min = ~29/day, safely under. Never go below 50 min. (At 15 min Reels sat at zero views.)
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
@@ -18,18 +18,18 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 4. Load vidIQ tools: `select:mcp__vidIQ__vidiq_video_upload,mcp__vidIQ__vidiq_instagram_publish_reel`.
 
 ## Conveyor (the order of work)
-A send_later timer does NOT interrupt a running turn: it waits until the turn ends. So never process for more than ~20 min in one turn.
+A send_later timer does NOT interrupt a running turn: it waits until the turn ends. So never process for more than ~35 min in one turn.
 
 First turn (videos just arrived):
 1. Put all names into queue.tsv in file-number order with an empty caption for now.
 2. Process video 1 fully (steps A-C below), write its caption, publish it (step D), tell Denys link + caption.
-3. Process the next videos one by one until ~20 min have passed since that publish.
-4. send_later(delay_minutes = 30 minus minutes already spent after the publish, at least 1) with the timer message (step E). End the turn.
+3. Process the next videos one by one until ~35 min have passed since that publish.
+4. send_later(delay_minutes = 50 minus minutes already spent after the publish, at least 1) with the timer message (step E). End the turn.
 
 Each timer turn:
 1. Next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first, then publish.
 2. Tell Denys link + caption.
-3. Process further unprocessed videos for up to ~20 min, then send_later for the remaining time to 30 min, end the turn.
+3. Process further unprocessed videos for up to ~35 min, then send_later for the remaining time to 50 min, end the turn.
 4. Queue empty: give the full list of links of this batch from published.log, no new timer.
 
 ## A. Transcribe (foreground only, background processes die after a reply)
@@ -60,7 +60,7 @@ On any error: stop, do not retry automatically, tell Denys.
 
 ## E. Timer message
 `send_later(delay_minutes=..., initiation=human_schedule, message=...)`:
-> Таймер: конвейер trial Reels по pipeline/README.md. Следующий ролик: `bash /home/claude/trials/pipeline/next.sh`. Если он ещё не обработан, обработай (A-C), затем опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай следующие ролики не дольше ~20 минут и поставь новый send_later так, чтобы следующая публикация вышла через 30 минут после этой. Если очередь пуста, дай итоговый список всех ссылок этой пачки из published.log.
+> Таймер: конвейер trial Reels по pipeline/README.md. Следующий ролик: `bash /home/claude/trials/pipeline/next.sh`. Если он ещё не обработан, обработай (A-C), затем опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай следующие ролики не дольше ~35 минут и поставь новый send_later так, чтобы следующая публикация вышла через 50 минут после этой (не раньше: лимит Instagram ~30 trial в сутки). Видео не режь, неразборчивые слова убирай только из субтитров. Если очередь пуста, дай итоговый список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
