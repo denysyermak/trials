@@ -4,7 +4,16 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 
 ## Rules agreed with Denys
 - Trial only, MANUAL. Account platformAccountId `28924267387235125` (vidIQ, Always Allow).
-- Caption: one short Russian phrase about what the video shows. No emoji, no hashtags.
+- Caption (Denys, 11/09/2026, same as skill reels-scripts «Trial Reels»): first line = one short Russian phrase about what the video shows, then an empty line, then two fixed contact lines. No emoji, no hashtags. queue.tsv keeps only the first line; add the contact lines when publishing (step D):
+  ```
+  [О чём это видео, одной строкой]
+
+  Нужна недвижимость в Америке? Пишите: WhatsApp, Telegram, SMS +1 (754) 286-8238
+  Denys Yermak, REALTOR®, Berkshire Hathaway HomeServices Florida Network Realty
+  ```
+  On screen: subtitles only, no contact strip on trials.
+- If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
+- Before each publish run `git log --format='%ci %s' -5`: if another chat pushed or cleaned up a video less than 50 min ago, wait so the 50-min gap holds across all chats.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
 - Interval 50 min. Instagram allows ~30 trial Reels per 24 h (Denys's count); 50 min = ~29/day, safely under. Never go below 50 min. (At 15 min Reels sat at zero views.)
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
@@ -53,7 +62,7 @@ Read the full text + subtitle chunks. Typical errors: риэлтор, Джекс
 ## D. Publish one
 1. `bash pipeline/push.sh NAME` -> prints raw.githubusercontent.com URL.
 2. `vidiq_video_upload(url=RAW, title=NAME)` -> videoUrl.
-3. `vidiq_instagram_publish_reel(platformAccountId, videoUrl, caption, trialParams={graduationStrategy: MANUAL})` -> containerId.
+3. `vidiq_instagram_publish_reel(platformAccountId, videoUrl, caption = queue line + empty line + the 2 contact lines from Rules, trialParams={graduationStrategy: MANUAL})` -> containerId.
 4. sleep ~50 s, call again with containerId only; repeat every ~20 s until PUBLISHED (takes 45-75 s).
 5. `bash pipeline/done.sh NAME PERMALINK` (removes the mp4 from the repo, appends to published.log).
 On any error: stop, do not retry automatically, tell Denys.
