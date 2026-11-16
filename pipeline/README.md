@@ -1,6 +1,6 @@
 # Trial Reels pipeline
 
-Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), one every 50 minutes, without asking for confirmation. Nothing goes to Facebook or TikTok.
+Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), in fixed time slots (max 10 a day, see «Schedule»), without asking for confirmation. Nothing goes to Facebook or TikTok.
 
 ## Rules agreed with Denys
 - Trial only, MANUAL. Account platformAccountId `28924267387235125` (vidIQ, Always Allow).
@@ -13,9 +13,9 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
   ```
   On screen: subtitles only, no contact strip on trials.
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
-- Before each publish run `git log --format='%ci %s' -5`: if another chat pushed or cleaned up a video less than 50 min ago, wait so the 50-min gap holds across all chats.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
-- Interval 50 min. Instagram allows ~30 trial Reels per 24 h (Denys's count); 50 min = ~29/day, safely under. Never go below 50 min. (At 15 min Reels sat at zero views.)
+- Schedule (Denys, 11/16/2026, replaces the 50-min interval): at most 10 trials a day, only in these slots, America/New_York: 6:15, 7:30, 8:45 AM; 1:00, 2:15, 3:30, 4:45 PM; 9:00, 10:15, 11:30 PM. Never 9 AM-1 PM and 5-9 PM: main Reels go out at 11 AM and 7 PM and get 2 hours each to themselves. Nothing 11:45 PM-6:15 AM.
+- Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if nobody published in the last 50 min.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
@@ -31,14 +31,14 @@ A send_later timer does NOT interrupt a running turn: it waits until the turn en
 
 First turn (videos just arrived):
 1. Put all names into queue.tsv in file-number order with an empty caption for now.
-2. Process video 1 fully (steps A-C below), write its caption, publish it (step D), tell Denys link + caption.
-3. Process the next videos one by one until ~35 min have passed since that publish.
-4. send_later(delay_minutes = 50 minus minutes already spent after the publish, at least 1) with the timer message (step E). End the turn.
+2. Process video 1 fully (steps A-C below), write its caption, run `bash pipeline/slot.sh`. NOW: publish it (step D), tell Denys link + caption. NEXT: tell Denys when it goes out.
+3. Process the next videos one by one, but stop ~10 min before the next slot (`slot.sh` shows it).
+4. send_later(at = the next slot from `slot.sh`) with the timer message (step E). End the turn.
 
 Each timer turn:
-1. Next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first, then publish.
+1. `bash pipeline/slot.sh`. NEXT: another chat took this slot, set send_later(at=NEXT time), end the turn. NOW: next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first (if the 15-min slot window passes, wait for the next slot), then publish.
 2. Tell Denys link + caption.
-3. Process further unprocessed videos for up to ~35 min, then send_later for the remaining time to 50 min, end the turn.
+3. Process further unprocessed videos until ~10 min before the next slot, then send_later(at = next slot from `slot.sh`), end the turn.
 4. Queue empty: give the full list of links of this batch from published.log, no new timer.
 
 ## A. Transcribe (foreground only, background processes die after a reply)
@@ -68,8 +68,8 @@ Read the full text + subtitle chunks. Typical errors: риэлтор, Джекс
 On any error: stop, do not retry automatically, tell Denys.
 
 ## E. Timer message
-`send_later(delay_minutes=..., initiation=human_schedule, message=...)`:
-> Таймер: конвейер trial Reels по pipeline/README.md. Следующий ролик: `bash /home/claude/trials/pipeline/next.sh`. Если он ещё не обработан, обработай (A-C), затем опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай следующие ролики не дольше ~35 минут и поставь новый send_later так, чтобы следующая публикация вышла через 50 минут после этой (не раньше: лимит Instagram ~30 trial в сутки). Видео не режь, неразборчивые слова убирай только из субтитров. Если очередь пуста, дай итоговый список всех ссылок этой пачки из published.log.
+`send_later(at=<NEXT time from slot.sh>, initiation=human_schedule, message=...)`:
+> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. Не больше 10 trial в сутки, только в слоты. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
@@ -80,4 +80,5 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/14-15/2026: 18 published at 50-min interval. 11/16/2026: switched to 10 fixed slots a day (slot.sh).
 11/06-07/2026: 19 + 12 Reels published this way. published.log is local to the session (not committed).
