@@ -19,12 +19,17 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
+- Music (Denys, 11/16/2026): every trial gets a track from the private library denysyermak/music, a different one each time: `bash pipeline/music.sh NAME silent|speech` after encode. `silent` = no speech kept in subtitles: music is the main sound, original sound stays very quiet under it. `speech` = someone talks: quiet bed 20 LU under the voice. Video stream copied, length unchanged.
+- Kelsie light (Denys, 11/16/2026): subtitles stay as they are (white phrases, black outline). Videos WITHOUT speech also get one hook line for the first 2.8 s: `python3 pipeline/hook.py NAME "тонкая часть" "КЛЮЧЕВОЕ"` (Inter Thin + yellow Inter ExtraBold key word). Hook = a concrete fact a stranger understands in 1 s (a number, a place, a contrast), only facts that are certain (place seen in frames or known from Denys). Not sure -> no hook. Videos with speech get no hook. Run hook.py AFTER editwords.py (rechunk rewrites the .ass) and right before encode.sh.
+- Full Kelsie (cover, rubric colour, chrome word) only for trial winners that Denys moves to a main slot (11 AM or 7 PM), not in this pipeline.
+- Test (from 11/16/2026): after the first 10 silent trials with hook + music, compare their views and skip rate with the 11/15 batch (silent trials without hook and music: about 270 views on average, skip rate 66-85%; trials with speech 345-1,720) and tell Denys. If no clear gain, ask him whether to keep it.
 
 ## Setup (new chat)
 1. add_repo denysyermak/trials (push), `git clone --depth 1 https://github.com/denysyermak/trials /home/claude/trials`, register_repo_root.
 2. `pip install -q --break-system-packages faster-whisper`, then preload: `python3 -c "from faster_whisper import WhisperModel; WhisperModel('medium',device='cpu',compute_type='int8')"` (run from /tmp).
 3. `git config user.name Claude; git config user.email noreply@anthropic.com`; `git push --dry-run` to check access. `mkdir -p /home/claude/out`.
 4. Load vidIQ tools: `select:mcp__vidIQ__vidiq_video_upload,mcp__vidIQ__vidiq_instagram_publish_reel`.
+5. Music library: add_repo denysyermak/music (push), `git clone --depth 1 https://github.com/denysyermak/music /home/claude/music`, then `git -C /home/claude/music config user.name Claude; git -C /home/claude/music config user.email noreply@anthropic.com` (music.sh logs every used track to used.tsv and pushes it).
 
 ## Conveyor (the order of work)
 A send_later timer does NOT interrupt a running turn: it waits until the turn ends. So never process for more than ~35 min in one turn.
@@ -56,8 +61,11 @@ Read the full text + subtitle chunks. Typical errors: риэлтор, Джекс
 - Fix with `python3 pipeline/editwords.py NAME 'old=new' 'old@-2=new' '#30-36='` (`--show` lists indexes). It reruns --rechunk.
 - Recurring errors go into FIXES in process.py (commit them).
 
-## C. Encode + spot check + caption
-`timeout 120 bash pipeline/encode.sh /mnt/user-data/uploads/NAME.mov /home/claude/out/NAME.ass /home/claude/out/NAME.tmp.mp4 && mv /home/claude/out/NAME.tmp.mp4 /home/claude/out/NAME.mp4`. Look at 3-4 frames in one hstack jpg: subtitles readable, above bottom UI, video not stretched. Write the caption into queue.tsv (`NAME<TAB>caption`).
+## C. Hook, encode, music, spot check, caption
+1. Video without speech and a certain fact: `python3 pipeline/hook.py NAME "тонкая часть" "КЛЮЧЕВОЕ"`.
+2. `timeout 120 bash pipeline/encode.sh /mnt/user-data/uploads/NAME.mov /home/claude/out/NAME.ass /home/claude/out/NAME.tmp.mp4 && mv /home/claude/out/NAME.tmp.mp4 /home/claude/out/NAME.mp4`.
+3. `bash pipeline/music.sh NAME silent` (no speech) or `bash pipeline/music.sh NAME speech`.
+4. Look at 3-4 frames in one hstack jpg: hook and subtitles readable, above bottom UI, video not stretched. Write the caption into queue.tsv (`NAME<TAB>caption`).
 
 ## D. Publish one
 1. `bash pipeline/push.sh NAME` -> prints raw.githubusercontent.com URL.
@@ -80,5 +88,5 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
-11/14-15/2026: 18 published at 50-min interval. 11/16/2026: switched to 10 fixed slots a day (slot.sh).
+11/14-15/2026: 18 published at 50-min interval. 11/16/2026: switched to 10 fixed slots a day (slot.sh); music for every trial (music.sh) and a hook line on videos without speech (hook.py).
 11/06-07/2026: 19 + 12 Reels published this way. published.log is local to the session (not committed).
