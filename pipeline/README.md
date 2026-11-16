@@ -15,7 +15,7 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
 - Schedule (Denys, 11/16/2026, replaces the 50-min interval): at most 10 trials a day, only in these slots, America/New_York: 6:15, 7:30, 8:45 AM; 1:00, 2:15, 3:30, 4:45 PM; 9:00, 10:15, 11:30 PM. Never 9 AM-1 PM and 5-9 PM: main Reels go out at 11 AM and 7 PM and get 2 hours each to themselves. Nothing 11:45 PM-6:15 AM.
-- Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if nobody published in the last 50 min.
+- Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.

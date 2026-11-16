@@ -3,7 +3,8 @@
 # Slots (America/New_York): 6:15, 7:30, 8:45 AM; 1:00, 2:15, 3:30, 4:45 PM; 9:00, 10:15, 11:30 PM.
 # A slot is usable from its start for 15 minutes, and only if no publication (any chat) in the last 50 min.
 cd "$(dirname "$0")/.." && git pull -q --rebase origin main 2>/dev/null
-LAST=$(git log --format='%ct %s' -30 | grep -v ' cleanup' | head -1 | cut -d' ' -f1)
+# A publication = a 'cleanup NAME' commit (done.sh runs right after PUBLISHED). Main-Reel uploads ('R1234', 'remove ... after upload') are scheduled posts and do not count.
+LAST=$(git log --format='%ct %s' -60 | grep -E '^[0-9]+ cleanup ' | head -1 | cut -d' ' -f1)
 python3 - "$LAST" <<'EOF'
 import sys
 from datetime import datetime, timedelta
