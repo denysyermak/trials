@@ -1,20 +1,20 @@
 # Trial Reels pipeline
 
-Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), in fixed time slots (max 10 a day, see «Schedule»), without asking for confirmation. Nothing goes to Facebook or TikTok.
+Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), in fixed time slots (max 5 a day, see «Schedule»), without asking for confirmation. Nothing goes to Facebook or TikTok.
 
 ## Rules agreed with Denys
 - Trial only, MANUAL. Account platformAccountId `28924267387235125` (vidIQ, Always Allow).
-- Caption (Denys, 11/09/2026, same as skill reels-scripts «Trial Reels»): first line = one short Russian phrase about what the video shows, then an empty line, then two fixed contact lines. No emoji, no hashtags. queue.tsv keeps only the first line; add the contact lines when publishing (step D):
+- Caption (Denys, 11/09/2026; contact question changed 11/19/2026; same as skill reels-scripts «Trial Reels»): first line = one short Russian phrase about what the video shows, then an empty line, then two fixed contact lines. No emoji, no hashtags. queue.tsv keeps only the first line; add the contact lines when publishing (step D):
   ```
   [О чём это видео, одной строкой]
 
-  Нужна недвижимость в Америке? Пишите: WhatsApp, Telegram, SMS +1 (754) 286-8238
+  Нужен дом в Jacksonville или St. Johns? Пишите: WhatsApp, Telegram, SMS +1 (754) 286-8238
   Denys Yermak, REALTOR®, Berkshire Hathaway HomeServices Florida Network Realty
   ```
   On screen: subtitles only, no contact strip on trials.
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
-- Schedule (Denys, 11/16/2026, replaces the 50-min interval): at most 10 trials a day, only in these slots, America/New_York: 6:15, 7:30, 8:45 AM; 1:00, 2:15, 3:30, 4:45 PM; 9:00, 10:15, 11:30 PM. Never 9 AM-1 PM and 5-9 PM: main Reels go out at 11 AM and 7 PM and get 2 hours each to themselves. Nothing 11:45 PM-6:15 AM.
+- Schedule (Denys, 11/19/2026, replaces the 10 slots of 11/16): at most 5 trials a day, only in these slots, America/New_York: 8:45 AM; 1:00, 3:30 PM; 9:00, 10:15 PM. Why fewer: 11/06-11/16/2026 at 14-28 trials a day views per day grew about 4x, but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment. Never 9 AM-1 PM and 5-9 PM: main Reels go out at 11 AM and 7 PM and get 2 hours each to themselves. Nothing 10:30 PM-8:45 AM.
 - Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
@@ -77,7 +77,7 @@ On any error: stop, do not retry automatically, tell Denys.
 
 ## E. Timer message
 `send_later(at=<NEXT time from slot.sh>, initiation=human_schedule, message=...)`:
-> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. Не больше 10 trial в сутки, только в слоты. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
+> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. Не больше 5 trial в сутки, только в слоты. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
@@ -88,5 +88,6 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/19/2026: 5 slots a day instead of 10 (slot.sh); contact line now «Нужен дом в Jacksonville или St. Johns?» instead of «Нужна недвижимость в Америке?».
 11/14-15/2026: 18 published at 50-min interval. 11/16/2026: switched to 10 fixed slots a day (slot.sh); music for every trial (music.sh) and a hook line on videos without speech (hook.py).
 11/06-07/2026: 19 + 12 Reels published this way. published.log is local to the session (not committed).
