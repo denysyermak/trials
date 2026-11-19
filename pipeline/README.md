@@ -14,14 +14,14 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
   On screen: subtitles only, no contact strip on trials.
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
 - Subtitles: simple white phrases, black outline, above Instagram's bottom UI.
-- Schedule (Denys, 11/19/2026, replaces the 10 slots of 11/16): at most 5 trials a day, only in these slots, America/New_York: 8:45 AM; 1:00, 3:30 PM; 9:00, 10:15 PM. Why fewer: 11/06-11/16/2026 at 14-28 trials a day views per day grew about 4x, but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment. Never 9 AM-1 PM and 5-9 PM: main Reels go out at 11 AM and 7 PM and get 2 hours each to themselves. Nothing 10:30 PM-8:45 AM.
+- Schedule (Denys, 11/19/2026, replaces the 10 slots of 11/16): at most 5 trials a day, only in these slots, America/New_York: 8:45 AM; 1:00, 3:30, 5:30 PM; 10:15 PM (5:30 PM replaced 9:00 PM on 11/19/2026 when the evening main Reel moved to 8 PM). Why fewer: 11/06-11/16/2026 at 14-28 trials a day views per day grew about 4x, but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment. Never 9 AM-1 PM and 6-10 PM: main Reels go out at 11 AM and 8 PM (evening moved from 7 PM on 11/19/2026: 8 PM ET is 4 AM in Moscow, so the first wave goes to US viewers) and get 2 hours each to themselves. Nothing 10:30 PM-8:45 AM.
 - Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
 - Music (Denys, 11/16/2026): every trial gets a track from the private library denysyermak/music, a different one each time: `bash pipeline/music.sh NAME silent|speech` after encode. `silent` = no speech kept in subtitles: music is the main sound, original sound stays very quiet under it. `speech` = someone talks: quiet bed 20 LU under the voice. Video stream copied, length unchanged.
 - Kelsie light (Denys, 11/16/2026): subtitles stay as they are (white phrases, black outline). Videos WITHOUT speech also get one hook line for the first 2.8 s: `python3 pipeline/hook.py NAME "тонкая часть" "КЛЮЧЕВОЕ"` (Inter Thin + yellow Inter ExtraBold key word). Hook = a concrete fact a stranger understands in 1 s (a number, a place, a contrast), only facts that are certain (place seen in frames or known from Denys). Not sure -> no hook. Videos with speech get no hook. Run hook.py AFTER editwords.py (rechunk rewrites the .ass) and right before encode.sh.
-- Full Kelsie (cover, rubric colour, chrome word) only for trial winners that Denys moves to a main slot (11 AM or 7 PM), not in this pipeline.
+- Full Kelsie (cover, rubric colour, chrome word) only for trial winners that Denys moves to a main slot (11 AM or 8 PM), not in this pipeline.
 - Test (from 11/16/2026): after the first 10 silent trials with hook + music, compare their views and skip rate with the 11/15 batch (silent trials without hook and music: about 270 views on average, skip rate 66-85%; trials with speech 345-1,720) and tell Denys. If no clear gain, ask him whether to keep it.
 
 ## Setup (new chat)
@@ -88,6 +88,7 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/19/2026 (later): evening main Reel 7 PM -> 8 PM; trial slot 9:00 PM -> 5:30 PM (slot.sh).
 11/19/2026: 5 slots a day instead of 10 (slot.sh); contact line now «Нужен дом в Jacksonville или St. Johns?» instead of «Нужна недвижимость в Америке?».
 11/14-15/2026: 18 published at 50-min interval. 11/16/2026: switched to 10 fixed slots a day (slot.sh); music for every trial (music.sh) and a hook line on videos without speech (hook.py).
 11/06-07/2026: 19 + 12 Reels published this way. published.log is local to the session (not committed).
