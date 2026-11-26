@@ -16,7 +16,9 @@ slots = [(0,0),(7,0),(9,0),(13,0),(15,0),(17,0),(22,0)]
 earliest = last + timedelta(minutes=50)
 for d in range(3):
     day = (now + timedelta(days=d)).date()
-    for h, m in slots:
+    # One-off 11/25/2026: another chat's timer is set for 10:15 PM by the old schedule, so tonight 10:15 PM replaces 10:00 PM.
+    day_slots = [(0,0),(7,0),(9,0),(13,0),(15,0),(17,0),(22,15)] if str(day) == "2026-11-25" else slots
+    for h, m in day_slots:
         s = datetime(day.year, day.month, day.day, h, m, tzinfo=tz)
         if s <= now < s + timedelta(minutes=15) and now >= earliest:
             print("NOW"); sys.exit()
