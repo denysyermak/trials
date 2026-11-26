@@ -1,6 +1,6 @@
 # Trial Reels pipeline
 
-Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), in fixed time slots (5 a day, one in each slot, see «Schedule»), without asking for confirmation. Nothing goes to Facebook or TikTok.
+Goal: Denys drops a batch of videos into the chat; Claude subtitles them and publishes each to Instagram @denys.yermak.realtor as a **trial Reel** (graduationStrategy MANUAL), in fixed time slots (7 a day, one in each slot, see «Schedule»), without asking for confirmation. Nothing goes to Facebook or TikTok.
 
 ## Rules agreed with Denys
 - Trial only, MANUAL. Account platformAccountId `28924267387235125` (vidIQ, Always Allow).
@@ -9,7 +9,7 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 - Caption (Denys, 11/19/2026, replaces the short 3-line trial caption): the full Instagram caption by `reels-scripts`: hook as the first line, text, price as one dated line on property Reels, keyword CTA only where `reels-scripts` allows it, the contact block «Контакты в описании», «Listed by» when it is another agent's listing, then 3-5 checked hashtags (sizes measured, rule in `reels-scripts`). Keep it in NAME.caption.txt (multi-line); queue.tsv keeps only NAME and the first line.
 - A trial that takes off: Denys taps «Share with everyone» himself (the evening main slot, 8 PM ET, Tue/Thu/Sat, picked at the Monday review). Never republish it as a new post: a duplicate loses the views and comments the trial already has.
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
-- Schedule (Denys, 11/19/2026, replaces the 10 slots of 11/16): 5 trials a day, one per slot, only in these slots, America/New_York: 8:45 AM; 1:00, 3:30, 5:30 PM; 10:15 PM (5:30 PM replaced 9:00 PM on 11/19/2026 when the evening main Reel moved to 8 PM). Why fewer: 11/06-11/16/2026 at 14-28 trials a day views per day grew about 4x, but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment. Never 9 AM-1 PM and 6-10 PM: main Reels go out at 11 AM and 8 PM (evening moved from 7 PM on 11/19/2026: 8 PM ET is 4 AM in Moscow, so the first wave goes to US viewers) and get 2 hours each to themselves. Nothing 10:30 PM-8:45 AM.
+- Schedule (Denys, 11/25/2026, replaces the 5 slots of 11/19): 7 trials a day, one per slot, only in these slots, America/New_York: 12:00 AM; 7:00, 9:00 AM; 1:00, 3:00, 5:00 PM; 10:00 PM. Main Reels go out at 11 AM and 8 PM and keep 2 hours each to themselves: no trial 11 AM-1 PM and 8-10 PM. History: 11/19/2026 cut 14-28 trials a day to 5 because views per day grew about 4x but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment; 11/25/2026 Denys moved to 7 slots.
 - Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
@@ -72,7 +72,7 @@ On any error: stop, do not retry automatically, tell Denys.
 
 ## E. Timer message
 `send_later(at=<NEXT time from slot.sh>, initiation=human_schedule, message=...)`:
-> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C, полный Келси, живая обложка на первом кадре, полное описание), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. 5 trial в сутки, по одному в слот. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
+> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C, полный Келси, живая обложка на первом кадре, полное описание), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. 7 trial в сутки, по одному в слот. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
@@ -83,6 +83,7 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/25/2026: 7 trial slots a day instead of 5: 12:00 AM; 7:00, 9:00 AM; 1:00, 3:00, 5:00 PM; 10:00 PM (slot.sh).
 11/19/2026 (night): 5 trials a day, one per slot; full Kelsie on every trial (hook from the middle, live cover on frame 0, full caption with 3-5 hashtags); winners go to the feed by «Share with everyone», never reposted.
 11/19/2026 (later): evening main Reel 7 PM -> 8 PM; trial slot 9:00 PM -> 5:30 PM (slot.sh).
 11/19/2026: 5 slots a day instead of 10 (slot.sh); contact line now «Нужен дом в Jacksonville или St. Johns?» instead of «Нужна недвижимость в Америке?».
