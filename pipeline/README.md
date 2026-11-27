@@ -83,6 +83,7 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/27/2026: pipeline/trial.py (raw iPhone HDR clips to a full-Kelsie trial: tone map, teaser copy, live cover on frame 0, phrase captions, contact strip, CTA; usage in its header), faces.py (sharp face frames for the teaser start; needs OpenCV haarcascades cloned to /home/claude/work/cvdata), music.sh (library track into render.mp4).
 11/25/2026: 7 trial slots a day instead of 5: 12:00 AM; 7:00, 9:00 AM; 1:00, 3:00, 5:00 PM; 10:00 PM (slot.sh).
 11/19/2026 (night): 5 trials a day, one per slot; full Kelsie on every trial (hook from the middle, live cover on frame 0, full caption with 3-5 hashtags); winners go to the feed by «Share with everyone», never reposted.
 11/19/2026 (later): evening main Reel 7 PM -> 8 PM; trial slot 9:00 PM -> 5:30 PM (slot.sh).
