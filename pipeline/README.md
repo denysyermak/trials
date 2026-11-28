@@ -10,7 +10,8 @@ Goal: Denys drops a batch of videos into the chat; Claude subtitles them and pub
 - A trial that takes off: Denys taps «Share with everyone» himself (the evening main slot, 8 PM ET, Tue/Thu/Sat, picked at the Monday review). Never republish it as a new post: a duplicate loses the views and comments the trial already has.
 - If vidiq_instagram_publish_reel returns "inconclusive (Meta code 2)", do not republish and do not set the next timer: ask Denys whether it came out. If he says to continue from that video, publish it again with a new container.
 - Schedule (Denys, 11/25/2026, replaces the 5 slots of 11/19): 7 trials a day, one per slot, only in these slots, America/New_York: 12:00 AM; 7:00, 9:00 AM; 1:00, 3:00, 5:00 PM; 10:00 PM. Main Reels go out at 11 AM and 8 PM and keep 2 hours each to themselves: no trial 11 AM-1 PM and 8-10 PM. History: 11/19/2026 cut 14-28 trials a day to 5 because views per day grew about 4x but follows per day stayed almost the same (4.6 vs 5.7) and 93% of trials got no comment; 11/25/2026 Denys moved to 7 slots.
-- Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh` (it pulls and reads git log): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
+- Slots are shared by ALL chats. Before every publish run `bash pipeline/slot.sh NAME` (it pulls and reads git log and pipeline/reserved.tsv): `NOW` = publish; `NEXT <time>` = do not publish, set `send_later(at=<time>)`. A slot is open for 15 min after its start and only if no trial was published (a 'cleanup NAME' commit) in the last 50 min.
+- SLOT RESERVATIONS (11/28/2026, after a chat offered 7 AM while 7 AM-3 PM were already held by other chats' timers): a timer is invisible to other chats, so EVERY timer is booked first. Right after `slot.sh NAME` says NEXT: `bash pipeline/reserve.sh "YYYY-MM-DD HH:MM" NAME "note"` (prints RESERVED, or TAKEN: then run slot.sh NAME again), only then send_later. Before telling Denys any time, run `bash pipeline/slot.sh --list` and quote it. A video dropped from the queue: `bash pipeline/reserve.sh --free NAME`. If Denys names a slot himself, reserve exactly that one.
 - CONVEYOR mode, not batch: process video 1 and publish it at once, then keep processing the rest between publications. Do not trim videos (any length).
 - Never invent words. If a fragment stays unclear after re-transcription, delete those words from the SUBTITLES only (video and audio stay untouched) and tell Denys which ones.
 - After each publish: short message with link + caption. At the end: full list of links.
@@ -31,14 +32,14 @@ A send_later timer does NOT interrupt a running turn: it waits until the turn en
 
 First turn (videos just arrived):
 1. Put all names into queue.tsv in file-number order with an empty caption for now.
-2. Process video 1 fully (steps A-C below), write its caption, run `bash pipeline/slot.sh`. NOW: publish it (step D), tell Denys link + caption. NEXT: tell Denys when it goes out.
+2. Process video 1 fully (steps A-C below), write its caption, run `bash pipeline/slot.sh NAME`. NOW: publish it (step D), tell Denys link + caption. NEXT: reserve it (`reserve.sh`), tell Denys when it goes out.
 3. Process the next videos one by one, but stop ~10 min before the next slot (`slot.sh` shows it).
-4. send_later(at = the next slot from `slot.sh`) with the timer message (step E). End the turn.
+4. Reserve the next slot (`reserve.sh`), then send_later(at = that slot) with the timer message (step E). End the turn.
 
 Each timer turn:
-1. `bash pipeline/slot.sh`. NEXT: another chat took this slot, set send_later(at=NEXT time), end the turn. NOW: next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first (if the 15-min slot window passes, wait for the next slot), then publish.
+1. `bash pipeline/slot.sh NAME`. NEXT: another chat holds this slot, reserve the NEXT time, set send_later(at=NEXT time), end the turn. NOW: next video = `bash pipeline/next.sh`. If it is processed (NAME.mp4 exists and caption filled), publish it. If not, process it first (if the 15-min slot window passes, wait for the next slot), then publish.
 2. Tell Denys link + caption.
-3. Process further unprocessed videos until ~10 min before the next slot, then send_later(at = next slot from `slot.sh`), end the turn.
+3. Process further unprocessed videos until ~10 min before the next slot, then reserve the next slot from `slot.sh NAME` and send_later(at = it), end the turn.
 4. Queue empty: give the full list of links of this batch from published.log, no new timer.
 
 ## A. Transcribe (foreground only, background processes die after a reply)
@@ -72,7 +73,7 @@ On any error: stop, do not retry automatically, tell Denys.
 
 ## E. Timer message
 `send_later(at=<NEXT time from slot.sh>, initiation=human_schedule, message=...)`:
-> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh`: NEXT = слот занят другим чатом, поставь send_later на это время и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C, полный Келси, живая обложка на первом кадре, полное описание), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом и поставь send_later(at) на следующий слот из slot.sh. 7 trial в сутки, по одному в слот. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
+> Таймер: конвейер trial Reels по pipeline/README.md. Сначала `bash /home/claude/trials/pipeline/slot.sh NAME`: NEXT = слот занят другим чатом, забронируй это время (`pipeline/reserve.sh`), поставь send_later и закончи. NOW = следующий ролик `bash /home/claude/trials/pipeline/next.sh`; если не обработан, обработай (A-C, полный Келси, живая обложка на первом кадре, полное описание), опубликуй (D), коротко сообщи Денису ссылку и подпись. Потом обрабатывай остальные до ~10 минут перед следующим слотом забронируй следующий слот (`pipeline/reserve.sh`) и поставь на него send_later(at). 7 trial в сутки, по одному в слот. Видео не режь, неразборчивые слова убирай только из субтитров. Meta code 2: не публикуй повторно, спроси Дениса. Очередь пуста: дай список всех ссылок этой пачки из published.log.
 
 ## What did NOT work
 - Hosting via claude.ai artifact: vidIQ gets no Content-Length.
@@ -83,6 +84,7 @@ On any error: stop, do not retry automatically, tell Denys.
 - Without PROMPT whisper sometimes returns text with no punctuation at all.
 
 ## Log
+11/28/2026: slot reservations: pipeline/reserved.tsv, reserve.sh, `slot.sh NAME` skips slots held by other names, `slot.sh --list` shows the day. Cause: slot.sh saw only past publications, not other chats' timers, and offered 7 AM while 7 AM-3 PM were taken.
 11/27/2026: pipeline/trial.py (raw iPhone HDR clips to a full-Kelsie trial: tone map, teaser copy, live cover on frame 0, phrase captions, contact strip, CTA; usage in its header), faces.py (sharp face frames for the teaser start; needs OpenCV haarcascades cloned to /home/claude/work/cvdata), music_render.sh (library track into work/NAME/render.mp4; the old music.sh is unchanged).
 11/25/2026: 7 trial slots a day instead of 5: 12:00 AM; 7:00, 9:00 AM; 1:00, 3:00, 5:00 PM; 10:00 PM (slot.sh).
 11/19/2026 (night): 5 trials a day, one per slot; full Kelsie on every trial (hook from the middle, live cover on frame 0, full caption with 3-5 hashtags); winners go to the feed by «Share with everyone», never reposted.
